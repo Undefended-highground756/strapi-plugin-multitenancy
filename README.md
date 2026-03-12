@@ -116,7 +116,7 @@ export default () => ({
     resolve: './src/plugins/multitenancy', // if installed locally
     // resolve is not needed if installed from npm
     config: {
-      rootDomain: 'myapp.com',      // Required: your root domain
+      rootDomain: env('ROOT_DOMAIN', 'myapp.com'),      // Required: your root domain
       requireTenant: false,          // Optional: block requests without a tenant
       cacheTtlMs: 10_000,           // Optional: tenant cache TTL in ms (default 10s)
       autoSyncOnBootstrap: false,    // Optional: sync all schemas on every startup
