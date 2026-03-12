@@ -1,6 +1,7 @@
 'use strict';
 
 const tenantContext = require('../context/tenant-context');
+const { createLogger } = require('../utils/logger');
 
 /**
  * Strapi 5 uses getSchemaName() and getConnection().withSchema() to qualify
@@ -11,9 +12,11 @@ const tenantContext = require('../context/tenant-context');
  * @param {object} strapi - Global Strapi instance
  */
 function install(strapi) {
+  const log = createLogger(strapi);
   const db = strapi.db;
+
   if (!db || typeof db.getSchemaName !== 'function') {
-    strapi.log.warn('[multitenancy] strapi.db.getSchemaName not found — proxy not installed.');
+    log.warn('[multitenancy] strapi.db.getSchemaName not found — proxy not installed.');
     return;
   }
 
@@ -32,7 +35,7 @@ function install(strapi) {
     return originalGetSchemaName();
   };
 
-  strapi.log.info('[multitenancy] strapi.db.getSchemaName proxy installed.');
+  log.info('[multitenancy] strapi.db.getSchemaName proxy installed.');
 }
 
 module.exports = { install };

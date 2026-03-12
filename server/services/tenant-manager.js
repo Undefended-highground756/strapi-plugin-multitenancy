@@ -1,14 +1,19 @@
 'use strict';
 
+const { createLogger } = require('../utils/logger');
+
 const TENANTS_TABLE = 'multitenancy_tenants';
 
 // In-memory cache: Map<slug, { data: tenant|null, ts: number }>
 const cache = new Map();
 
-module.exports = ({ strapi }) => ({
+module.exports = ({ strapi }) => {
+  const log = createLogger(strapi);
+
+  return {
   async init() {
     await this._ensureTable();
-    strapi.log.info('[multitenancy] TenantManager ready.');
+    log.info('[multitenancy] TenantManager ready.');
   },
 
   /**
@@ -173,7 +178,8 @@ module.exports = ({ strapi }) => ({
         t.index(['slug'], 'idx_mt_tenants_slug');
       });
 
-      strapi.log.info(`[multitenancy] Control table "${TENANTS_TABLE}" created in public schema.`);
+      log.info(`[multitenancy] Control table "${TENANTS_TABLE}" created in public schema.`);
     }
   },
-});
+  };
+};

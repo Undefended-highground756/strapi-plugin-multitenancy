@@ -120,6 +120,7 @@ export default () => ({
       requireTenant: false,          // Optional: block requests without a tenant
       cacheTtlMs: 10_000,           // Optional: tenant cache TTL in ms (default 10s)
       autoSyncOnBootstrap: false,    // Optional: sync all schemas on every startup
+      debug: false,                  // Optional: enable verbose plugin logs
     },
   },
 });
@@ -167,6 +168,7 @@ Or configure it directly via `config/plugins.ts` using the `rootDomain` option (
 | `requireTenant` | `boolean` | `false` | If `true`, requests with no identifiable tenant are rejected with `403`. Admin (`/admin`) and health-check (`/_health`) routes are always exempt. |
 | `cacheTtlMs` | `number` | `10000` | Time-to-live in milliseconds for the in-memory tenant cache. Set to `0` to disable caching. |
 | `autoSyncOnBootstrap` | `boolean` | `false` | If `true`, synchronizes all tenant schemas every time Strapi starts. Useful in development; consider disabling in production for faster boot times. |
+| `debug` | `boolean` | `false` | If `true`, enables verbose `info` and `debug` level logs from the plugin. `warn` and `error` logs are always printed regardless of this setting. |
 
 ---
 

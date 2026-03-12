@@ -1,8 +1,11 @@
 'use strict';
 
 const tenantContext = require('../context/tenant-context');
+const { createLogger } = require('../utils/logger');
 
 module.exports = (config, { strapi }) => {
+  const log = createLogger(strapi);
+
   return async (ctx, next) => {
     // Prefer hostname (reliable with app.proxy = true behind a reverse proxy).
     // Fall back to Origin/Referer when the frontend is on a different subdomain than the API.
@@ -54,7 +57,7 @@ module.exports = (config, { strapi }) => {
     try {
       tenant = await tenantService.getTenant(slug);
     } catch (err) {
-      strapi.log.error(`[multitenancy] Error looking up tenant "${slug}": ${err.message}`);
+      log.error(`[multitenancy] Error looking up tenant "${slug}": ${err.message}`);
       ctx.status = 503;
       ctx.body = { error: 'service_unavailable', message: 'Tenant lookup failed.' };
       return;
@@ -72,7 +75,7 @@ module.exports = (config, { strapi }) => {
     // Inject into Koa state for direct access in controllers if needed
     ctx.state.tenant = tenant;
 
-    strapi.log.debug(`[multitenancy] ${ctx.method} ${ctx.path} → tenant: ${tenant.slug} (via ${hostnameSource})`);
+    log.debug(`[multitenancy] ${ctx.method} ${ctx.path} → tenant: ${tenant.slug} (via ${hostnameSource})`);
 
     // CRITICAL: Execute the entire middleware chain and handler
     // inside the tenant context via AsyncLocalStorage.

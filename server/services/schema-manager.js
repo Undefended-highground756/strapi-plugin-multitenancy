@@ -1,5 +1,7 @@
 'use strict';
 
+const { createLogger } = require('../utils/logger');
+
 // The control table lives exclusively in the public schema — never cloned or mapped.
 const EXCLUDED_EXACT = ['multitenancy_tenants'];
 
@@ -29,7 +31,10 @@ function isSystemTable(name) {
   return SYSTEM_PREFIXES.some((p) => name.startsWith(p)) || SYSTEM_TABLES_EXACT.has(name);
 }
 
-module.exports = ({ strapi }) => ({
+module.exports = ({ strapi }) => {
+  const log = createLogger(strapi);
+
+  return {
   _assertPostgres() {
     const clientType = strapi.db.connection?.client?.config?.client || 'unknown';
     if (!['pg', 'postgres', 'postgresql'].includes(clientType)) {
@@ -52,7 +57,7 @@ module.exports = ({ strapi }) => ({
     await knex.raw(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
     const contentTables = await this._getContentTables(knex);
-    strapi.log.info(`[multitenancy] Creating schema "${schemaName}" with ${contentTables.length} content tables...`);
+    log.info(`[multitenancy] Creating schema "${schemaName}" with ${contentTables.length} content tables...`);
 
     for (const table of contentTables) {
       await knex.raw(`
@@ -64,7 +69,7 @@ module.exports = ({ strapi }) => ({
     await this._replicateForeignKeys(knex, schemaName, contentTables);
     await this._syncSystemViews(knex, schemaName);
 
-    strapi.log.info(`[multitenancy] Schema "${schemaName}" created successfully.`);
+    log.info(`[multitenancy] Schema "${schemaName}" created successfully.`);
   },
 
   /**
@@ -77,7 +82,7 @@ module.exports = ({ strapi }) => ({
     this._validateName(schemaName);
     const knex = strapi.db.connection;
     await knex.raw(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-    strapi.log.info(`[multitenancy] Schema "${schemaName}" dropped.`);
+    log.info(`[multitenancy] Schema "${schemaName}" dropped.`);
   },
 
   /**
@@ -95,7 +100,7 @@ module.exports = ({ strapi }) => ({
 
     const schemaExists = await this._schemaExists(knex, schemaName);
     if (!schemaExists) {
-      strapi.log.info(`[multitenancy] Schema "${schemaName}" does not exist. Creating...`);
+      log.info(`[multitenancy] Schema "${schemaName}" does not exist. Creating...`);
       await this.createSchema(schemaName);
       return;
     }
@@ -111,7 +116,7 @@ module.exports = ({ strapi }) => ({
             (LIKE public."${table}" INCLUDING ALL)
         `);
         synced++;
-        strapi.log.info(`[multitenancy] Table "${table}" added to schema "${schemaName}".`);
+        log.info(`[multitenancy] Table "${table}" added to schema "${schemaName}".`);
       }
     }
 
@@ -126,7 +131,7 @@ module.exports = ({ strapi }) => ({
     await this._syncSystemViews(knex, schemaName);
 
     if (synced > 0) {
-      strapi.log.info(`[multitenancy] Schema "${schemaName}": ${synced} new tables synchronized.`);
+      log.info(`[multitenancy] Schema "${schemaName}": ${synced} new tables synchronized.`);
     }
   },
 
@@ -138,11 +143,11 @@ module.exports = ({ strapi }) => ({
     const tenants = await strapi.plugin('multitenancy').service('tenantManager').getAllTenants();
 
     if (tenants.length === 0) {
-      strapi.log.info('[multitenancy] No active tenants to synchronize.');
+      log.info('[multitenancy] No active tenants to synchronize.');
       return;
     }
 
-    strapi.log.info(`[multitenancy] Synchronizing ${tenants.length} tenant schemas...`);
+    log.info(`[multitenancy] Synchronizing ${tenants.length} tenant schemas...`);
 
     const results = await Promise.allSettled(tenants.map((t) => this.syncSchema(t.schema)));
 
@@ -151,10 +156,10 @@ module.exports = ({ strapi }) => ({
       .filter(Boolean);
 
     errors.forEach(({ tenant, reason }) => {
-      strapi.log.error(`[multitenancy] Sync failed for "${tenant.slug}": ${reason?.message ?? reason}`);
+      log.error(`[multitenancy] Sync failed for "${tenant.slug}": ${reason?.message ?? reason}`);
     });
 
-    strapi.log.info(`[multitenancy] Sync complete: ${tenants.length - errors.length}/${tenants.length} OK.`);
+    log.info(`[multitenancy] Sync complete: ${tenants.length - errors.length}/${tenants.length} OK.`);
   },
 
   // ─── Private methods ────────────────────────────────────────────────────────
@@ -209,7 +214,7 @@ module.exports = ({ strapi }) => ({
         [schemaName, table]
       );
       if (isRealTable.length > 0) {
-        strapi.log.info(`[multitenancy] Converting table "${schemaName}"."${table}" to a view...`);
+        log.info(`[multitenancy] Converting table "${schemaName}"."${table}" to a view...`);
         await knex.raw(`DROP TABLE IF EXISTS "${schemaName}"."${table}" CASCADE`);
       }
 
@@ -219,7 +224,7 @@ module.exports = ({ strapi }) => ({
       `);
     }
 
-    strapi.log.debug(`[multitenancy] System views synchronized in "${schemaName}".`);
+    log.debug(`[multitenancy] System views synchronized in "${schemaName}".`);
   },
 
   async _replicateForeignKeys(knex, targetSchema, tables) {
@@ -273,7 +278,7 @@ module.exports = ({ strapi }) => ({
           ALTER TABLE "${schemaName}"."${table}"
           ADD COLUMN IF NOT EXISTS "${col.column_name}" ${col.data_type} ${nullable} ${def}
         `).catch((err) => {
-          strapi.log.warn(`[multitenancy] Column "${col.column_name}" in "${schemaName}"."${table}": ${err.message}`);
+          log.warn(`[multitenancy] Column "${col.column_name}" in "${schemaName}"."${table}": ${err.message}`);
         });
       }
     }
@@ -288,4 +293,5 @@ module.exports = ({ strapi }) => ({
       throw new Error(`Schema name "${name}" is reserved by PostgreSQL.`);
     }
   },
-});
+  };
+};
