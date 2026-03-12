@@ -137,8 +137,8 @@ export default [
   'strapi::security',
   'strapi::cors',
   'strapi::poweredBy',
-  'strapi::query',        // ← tenant-resolver must come BEFORE this
-  'plugin::multitenancy.tenant-resolver',  // ← add here
+  'plugin::multitenancy.tenant-resolver', // ← add here
+  'strapi::query',                        // ← tenant-resolver must come BEFORE this
   'strapi::body',
   'strapi::session',
   'strapi::favicon',
